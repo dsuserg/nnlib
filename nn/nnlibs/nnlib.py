@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Abstract classes library
+
 Created on Sat Jun  9 16:02:28 2018
 
 @author: dsu
 """
+
 import numpy as np
+
 
 class ActivationFunc:
     
@@ -114,17 +118,18 @@ class HiddenLayer:
     def get_connected_layer(self):
         return self._connected_with
     
-    def __len__(self):
-        return self._neurons_cnt
-    
     def calc_neurons_state(self,prev_layer):
         raise NotImplementedError('action must be defined!')
     
     def dtype(self):
         return self._dtype
     
+    def __len__(self):
+        return self._neurons_cnt
     
-class NeuralNetwork:                  
+#Accumulative class    
+class NeuralNetwork:
+                  
     def __init__(self, structure, activation_func, dtype = np.float64 ):
         self._dtype = dtype
         self._structure = structure
@@ -132,7 +137,9 @@ class NeuralNetwork:
         self._hidden_layers_cnt = len(structure) - 1
         self._layers = []
         self._activation_func = activation_func
-                                        
+    
+    #strategy pattern
+    #updating coefficients relies on Trainer class                                     
     def train(self, training_dataset, trainer):
         trainer.train(self, training_dataset)
         
@@ -146,33 +153,17 @@ class NeuralNetwork:
     
     def get_coefficients(self):
         coeff = []
+        
         for layer in self._layers:
             coeff.append(layer.get_coefficients())
         
-        return coeff    
-    
-    def printo(self):
-        coeff = []
-        for layer in self._layers:
-            coeff.append([layer.get_biases()])
-            coeff.append(layer.get_coefficients())
-        
-        for c in coeff:
-            for r in c:
-                for k in r:
-                    for c in k:
-                        print (c)
-            print('-'*20)
-        
+        return coeff            
         
     def get_activation_func(self):
         return self._activation_func
     
     def get_structure(self):
         return self._structure
-    
-    def __len__(self):
-        return len(self._structure) - 1
         
     def save_network(self,save_as):
         ...
@@ -180,13 +171,16 @@ class NeuralNetwork:
     def dtype(self):
         return self._dtype
         
+    def __len__(self):
+        return self._hidden_layers_cnt
+    
     def __getitem__(self, key):
         return self._layers[key]
 
     def __iter__(self):
         return (layer for layer in self._layers)
     
-    
+#so abstract
 class Trainer:
     def __init__(self, *params, **kparams):
         ...
