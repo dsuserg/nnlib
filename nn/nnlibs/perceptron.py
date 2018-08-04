@@ -52,39 +52,40 @@ class HiddenLayer(nn.HiddenLayer):
                           self._neurons_coefficients[i])
             self._neurons += self._bias_coefficients[i]**(i+1)       #with bias
             
-    def set_new_order(self, order):
-        if order > self.order:
-            init_w = np.zeros([len(self._connected_with), len(self)], 
-                              dtype = self._dtype
-                             )
-            for i in range(order - self.order):
-                self._neurons_coefficients.append(init_w)
-            
-            init_b = np.zeros(len(self), dtype = self._dtype)
-            for i in range(order - self.order):
-                self._bias_coefficients.append(init_b)
-                
-        else:
-            self._neurons_coefficients = self._neurons_coefficients[:order - 1]
-            
-        self.order = order
+#    def set_new_order(self, order):
+#        if order > self.order:
+#            init_w = np.zeros([len(self._connected_with), len(self)], 
+#                              dtype = self._dtype
+#                             )
+#            for i in range(order - self.order):
+#                self._neurons_coefficients.append(init_w)
+#            
+#            init_b = np.zeros(len(self), dtype = self._dtype)
+#            for i in range(order - self.order):
+#                self._bias_coefficients.append(init_b)
+#                
+#        else:
+#            self._neurons_coefficients = self._neurons_coefficients[:order - 1]
+#            
+#        self.order = order
         
     def get_biases(self):
         return self._bias_coefficients
     
-#
-#    def set_new_order(self, order):
-#        if order > self.order:
-#            init_w = np.random.rand(len(self._connected_with),            
-#                               self._neurons_cnt
-#                               ).astype(self._dtype)
-#            for i in range(order - self.order):
-#                self._neurons_coefficients.append(init_w)
-#            
-#            init_b = np.random.rand(len(self._connected_with)  ).astype(self._dtype)
-#            for i in range(order - self.order):
-#                self._bias_coefficients.append(init_b)
-                
+
+    def set_new_order(self, order):
+        if order > self.order:
+            init_w = np.random.rand(len(self._connected_with),            
+                               self._neurons_cnt
+                               ).astype(self._dtype)
+            for i in range(order - self.order):
+                self._neurons_coefficients.append(init_w)
+            
+            init_b = np.random.rand(len(self._connected_with)  ).astype(self._dtype)
+            for i in range(order - self.order):
+                self._bias_coefficients.append(init_b)
+        self.order = order
+        
 class NPecrep(nn.NeuralNetwork):
     
     def __init__(self, structure, activation_func, dtype = np.float64):
@@ -183,9 +184,13 @@ class Backpropagation_nn(nn.Trainer):
             
         for i in range(len(network) - 2 , -1, -1):
             derivatives = derivative(network[i].get_state_neurons())
+            weights = network[i+1].get_coefficients()[0]
+            discrepancies[i] = np.dot(discrepancies[i + 1], 
+                                      np.transpose(weights)) 
             for j in range(network.get_order()):
+                if j == 0 : continue
                 weights = network[i+1].get_coefficients()[j]
-                discrepancies[i] = np.dot(discrepancies[i + 1], 
+                discrepancies[i] += np.dot(discrepancies[i + 1], 
                                            np.transpose(weights)) 
             discrepancies[i] *= derivatives
        
