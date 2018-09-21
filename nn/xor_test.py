@@ -7,11 +7,14 @@ Created on Tue Jul 31 12:42:57 2018
 
 @author: dsu
 """
+
 import copy
 import time
 import numpy as np
 import nnlibs.nnlib as nn
 import nnlibs.perceptron as perc
+import random
+import matplotlib.pyplot as plt
 
 
 inp = nn.Dataset([[0.0, 0.0],
@@ -23,48 +26,60 @@ out = nn.Dataset([[0.0],
                   [1.0],
                   [1.0],
                   [0.0]])
+cn = 50
+inp1 = nn.Dataset([[np.random.rand() for i in range(4)] for j in range(cn)])
+out1 = nn.Dataset([[i[2]/sum(i),i[1]/sum(i), i[0]/sum(i), np.sin(sum(i))] for i in inp1])
 
-tr_dt = [inp, out]     
+tinp1 = nn.Dataset([[random.random() for i in range(4)] for j in range(1000)])
+tout1 = nn.Dataset([[i[2]/sum(i),i[1]/sum(i), i[0]/sum(i), np.sin(sum(i))] for i in inp1])
+
+#tr_dt = [iNN2np, out]     
+tr_dt = [inp1, out1]
 
 counter = 0
 
-while(True):
-    NN = perc.NPecrep([2, 2, 2, 2, 1], perc.sgmoidFunc)   #trying reinitialize
-    counter += 1
-    print("attempt № ", counter )
-    stime = time.time() 
-    NN.train(tr_dt, perc.Backpropagation(100000,1))
-    print("training time", time.time() - stime)
-    nn_out = np.array([NN.predict(i) for i in inp])
-    error = nn.Metric(out,nn_out).standard_deviation()
-    print("Standard deviation error: ", error)
-    # because sometimes it may stuck in local minima, so there is two ways:
-    # reinitialize network to randomize start weights - more preferable
-    # continue training 
-    if (error < 0.02):
-        break
-    
-head = "{0:^8} | {1:^12}".format("real_out", "predicted")
-head_len = len(head)
-print(head)
-print("-" * head_len)
 
-for i in range(len(out)):
-    print("{0:^8} | {1:^12}".format(str(out[i]), str(nn_out[i])))
+n = perc.NPecrep([4, 4, 4], perc.sgmoidFunc)
+n2 = copy.deepcopy(n)
+n3 = copy.deepcopy(n)
+
+n2.set_new_order(2)
+n_out = [n2.predict(i) for i in inp1]
+tr_error1 = nn.RMSE(out1, n_out)
+print("Training error:", tr_error1)
+#n2.train(tr_dt, perc.Backpropagation_nn(1000))
+n2.train(tr_dt, perc.Speedest_decent(1000, nn.RMSE, 0.01, 0.00001))
+n_out = [n2.predict(i) for i in inp1]
+tr_error1 = nn.RMSE(out1, n_out)
+print("Training error:", tr_error1)
+
+n.train(tr_dt, perc.Backpropagation(1000))
+n_out = [n.predict(i) for i in inp1]
+tr_error1 = nn.RMSE(out1, n_out)
+print("Training error:", tr_error1)
 
 
-    print("-" * head_len)
-print("Standard deviation error: ", error)
+print('-'*20)
 #
-#NN2 = copy.deepcopy(NN)
-#NN2.set_new_order(2)
-#NN.train(tr_dt, perc.Backpropagation_nn(5000,1))
-#nn_out = np.array([NN.predict(i) for i in inp])
-#error = nn.Metric(out,nn_out).standard_deviation()
-#print("Standard deviation error: ", error)
 #
-#NN.train(tr_dt, perc.Backpropagation(5000,1))
-#nn_out = np.array([NN.predict(i) for i in inp])
-#error = nn.Metric(out,nn_out).standard_deviation()
-#print("Standard deviation error: ", error)
+
+#
+#n2.train(tr_dt, perc.Backpropagation_nn(10000))
+#n_out = [n2.predict(i) for i in inp1]
+#tr_error2 = nn.RMSE(out1, n_out)
+#print("Training error:", tr_error2)
+#
+#n_out = [n2.predict(i) for i in tinp1]
+#te_error2 = nn.RMSE(tout1, n_out)
+#print("Test error:    ", te_error2)
+#
+#
+#n.train(tr_dt, perc.Backpropagation(10000))
+#n_out = [n.predict(i) for i in inp1]
+#tr_error1 = nn.RMSE(out1, n_out)
+#print("Training error:", tr_error1)
+#
+#n_out = [n.predict(i) for i in tinp1]
+#te_error1 = nn.RMSE(tout1, n_out)
+#print("Test error:    ", te_error1)
 
