@@ -51,7 +51,8 @@ class HiddenLayer(nn.HiddenLayer):
             self._neurons += np.dot(
                           self._connected_with.get_neurons()**(i+1),
                           self._neurons_coefficients[i])
-            self._neurons += self._bias_coefficients[i]**(i+1)       #with bias
+        
+        self._neurons += self._bias_coefficients[0]       #with bias
             
     def set_new_order(self, order):
         if order > self.order:
@@ -61,9 +62,9 @@ class HiddenLayer(nn.HiddenLayer):
             for i in range(order - self.order):
                 self._neurons_coefficients.append(init_w)
             
-            init_b = np.zeros(len(self), dtype = self._dtype)
-            for i in range(order - self.order):
-                self._bias_coefficients.append(init_b)
+#            init_b = np.zeros(len(self), dtype = self._dtype)
+#            for i in range(order - self.order):
+#                self._bias_coefficients.append(init_b)
                 
         else:
             self._neurons_coefficients = self._neurons_coefficients[:order - 1]
@@ -250,7 +251,7 @@ class Speedest_decent(nn.Trainer):
         for layer in network:
             bias_coeff = layer.get_biases()
             columns_cnt = len(bias_coeff[0])
-            for o in range(order):
+            for o in range(1):
                 for c in range(columns_cnt):
                     bias_coeff[o][c] += self._E/2
                     nn_out = [network.predict(i) for i in inp_data]
@@ -281,12 +282,21 @@ class Speedest_decent(nn.Trainer):
                         coeff[o][r][c] += self._E/2
                         part_der[o].append((x_1-x_2)/self._E)
         
-        return np.array(part_der)
+        return part_der
     
+    def sum_derr(self, partial_derr):
+        sum_d = 0
+        
+        for ord_batch in partial_derr:
+            for i in ord_batch:
+                sum_d += i**2
+        
+        return sum_d**(1/2)
+        
     def _b_coeff_calc(self, network, data):
         partial_derr = self._partial_der(network, data)
         order = network.get_order()
-        sum_der = (sum(sum(partial_derr**2)))**(1/2)
+        sum_der = self.sum_derr(partial_derr)
         b_coeff = [[] for i in range(order)]
         
         for layer in network:
@@ -309,7 +319,7 @@ class Speedest_decent(nn.Trainer):
         for layer in network:
             bias_coeff = layer.get_biases()
             columns_cnt = len(bias_coeff[0])
-            for o in range(order):
+            for o in range(1):
                 for c in range(columns_cnt):
                     bias_coeff[o][c] += d*tr_speed*b_coeff[o][counter]
                     counter += 1
