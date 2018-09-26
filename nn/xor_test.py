@@ -39,22 +39,29 @@ tr_dt = [inp1, out1]
 counter = 0
 
 
-n = perc.NPecrep([4, 4, 4], perc.sgmoidFunc)
+n = perc.NPecrep([4, 1, 4], perc.sgmoidFunc)
 n2 = copy.deepcopy(n)
 n3 = copy.deepcopy(n)
 
-n2.set_new_order(2)
+
 n_out = [n2.predict(i) for i in inp1]
 tr_error1 = nn.RMSE(out1, n_out)
 print("Training error:", tr_error1)
-#n2.train(tr_dt, perc.Backpropagation_nn(1000))
+n2.train(tr_dt, perc.Backpropagation_nn(1000))
+n2.set_new_order(2)
 n2.train(tr_dt, perc.Speedest_decent(1000, nn.RMSE, 0.01, 0.00001))
 n_out = [n2.predict(i) for i in inp1]
 tr_error1 = nn.RMSE(out1, n_out)
 print("Training error:", tr_error1)
 
-n.train(tr_dt, perc.Backpropagation(1000))
+n.train(tr_dt, perc.Backpropagation(2000))
 n_out = [n.predict(i) for i in inp1]
+tr_error1 = nn.RMSE(out1, n_out)
+print("Training error:", tr_error1)
+
+n3.set_new_order(2)
+n3.train(tr_dt, perc.Backpropagation_nn(2000))
+n_out = [n3.predict(i) for i in inp1]
 tr_error1 = nn.RMSE(out1, n_out)
 print("Training error:", tr_error1)
 
@@ -69,17 +76,17 @@ print('-'*20)
 #tr_error2 = nn.RMSE(out1, n_out)
 #print("Training error:", tr_error2)
 #
-#n_out = [n2.predict(i) for i in tinp1]
-#te_error2 = nn.RMSE(tout1, n_out)
-#print("Test error:    ", te_error2)
-#
+n_out = [n2.predict(i) for i in tinp1]
+te_error2 = nn.RMSE(tout1, n_out)
+print("Test error:    ", te_error2)
+
 #
 #n.train(tr_dt, perc.Backpropagation(10000))
 #n_out = [n.predict(i) for i in inp1]
 #tr_error1 = nn.RMSE(out1, n_out)
 #print("Training error:", tr_error1)
 #
-#n_out = [n.predict(i) for i in tinp1]
-#te_error1 = nn.RMSE(tout1, n_out)
-#print("Test error:    ", te_error1)
+n_out = [n.predict(i) for i in tinp1]
+te_error1 = nn.RMSE(tout1, n_out)
+print("Test error:    ", te_error1)
 

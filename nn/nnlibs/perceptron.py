@@ -7,7 +7,7 @@ Created on Mon Jun 11 19:32:10 2018
 
 @author: dsu
 """
-import copy
+
 import math
 import numpy as np
 if __name__ == "__main__":
@@ -314,15 +314,15 @@ class Speedest_decent(nn.Trainer):
     
     def _update_coeff(self, network, tr_speed, b_coeff, d):
         order = network.get_order()
-        counter = 0
+        counters = [0 for i in range(order)]
         
         for layer in network:
             bias_coeff = layer.get_biases()
             columns_cnt = len(bias_coeff[0])
             for o in range(1):
                 for c in range(columns_cnt):
-                    bias_coeff[o][c] += d*tr_speed*b_coeff[o][counter]
-                    counter += 1
+                    bias_coeff[o][c] += d*tr_speed*b_coeff[o][counters[o]]
+                    counters[o] += 1
                         
         for layer in network:
             coeff = layer.get_coefficients()
@@ -331,8 +331,8 @@ class Speedest_decent(nn.Trainer):
             for o in range(order):
                 for r in range(rows_cnt):
                     for c in range(columns_cnt):
-                        coeff[o][r][c] += d*tr_speed*b_coeff[o][counter]
-                        counter +=1
+                        coeff[o][r][c] += d*tr_speed*b_coeff[o][counters[o]]
+                        counters[o] +=1
 
                         
     def train(self, neural_network, training_dataset):
@@ -343,6 +343,7 @@ class Speedest_decent(nn.Trainer):
         
         rollback = 0
         for i in range(self._iterations_cnt):
+            if(tr_speed < 0.00001): break
             self._update_coeff(network, tr_speed, b_coeff, -1)
             error = self._calc_error(network, training_dataset)
             print(error)
@@ -357,7 +358,7 @@ class Speedest_decent(nn.Trainer):
                     self._update_coeff(network, tr_speed, b_coeff, 1)
                     rollback = 1
                 
-                tr_speed /= 4    
+                tr_speed /= 8    
                 b_coeff = self._b_coeff_calc(network, training_dataset)
                  
 
