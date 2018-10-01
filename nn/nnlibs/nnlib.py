@@ -33,9 +33,9 @@ class Dataset:
         self._centers = None
         
     def tune_up(self, expert = None, percentage = None):
-        self._max_elems = np.zeroes((self._example_size))
-        self._min_elems = np.zeroes((self._example_size))
-        self._centers = np.zeroes((self._example_size))
+        self._max_elems = np.zeros((self._example_size))
+        self._min_elems = np.zeros((self._example_size))
+        self._centers = np.zeros((self._example_size))
        
         if expert:
             for i in range(self._example_size):
@@ -44,12 +44,12 @@ class Dataset:
                     self._min_elems[i] = expert[i][1]
                 else:
                     self._max_elems[i] = max(self._data[:,i])
-                    self._min_elems[i] = max(self._data[:,i])            
+                    self._min_elems[i] = min(self._data[:,i])            
 
         else:
             for i in range(self._example_size):
                 self._max_elems[i] = max(self._data[:,i])
-                self._min_elems[i] = max(self._data[:,i])
+                self._min_elems[i] = min(self._data[:,i])
         
         if percentage:
             for i in range(self._example_size):
