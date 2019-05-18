@@ -8,7 +8,6 @@ Created on Mon Jun 11 19:32:10 2018
 @author: dsu
 """
 
-import math
 import numpy as np
 if __name__ == "__main__":
     import nnlib as nn
@@ -17,7 +16,7 @@ else:
 
 
 def sigmoid(net, a = 1.0):
-    return 1/(1 + math.e**(net*-a))
+    return 1/(1 + np.exp(net*-a))
 
 def sigmoid_derivative(net, a = 1.0):
     sigm = sigmoid(net)
@@ -45,7 +44,6 @@ class HiddenLayer(nn.HiddenLayer):
 
     def calc_neurons_state(self):
         order = self.order
-#        print(self._neurons)
         self._neurons *=0
         for i in range(order):
             self._neurons += np.dot(
@@ -161,8 +159,7 @@ class Backpropagation(nn.Trainer):
                 self.update_coefficients(discrepancies, 
                                          inp[j], 
                                          neural_network)
-
-
+                
 class Backpropagation_nn(nn.Trainer):
     
     def __init__(self, epoches_cnt, train_speed = 1.0):
@@ -203,7 +200,6 @@ class Backpropagation_nn(nn.Trainer):
                             )
             
         for i in range(len(network)):
-#           for j in range(net_order):
             biases = network[i].get_biases()[0]
             biases += tr_speed*discrepancies[i]
                 
