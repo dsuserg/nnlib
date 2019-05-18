@@ -1,0 +1,7 @@
+*.pyc
+*.bak
+*.dat
+*.dir
+__pycache__
+test*.py
+plot*.py
