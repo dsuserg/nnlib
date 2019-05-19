@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 def train_net(net, sample):
     EPOCHES_CNT = 100
     
-    sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,6]])
-    sample_y = nn.Dataset(sample[1:],  expert = [[0,80], [-12,6], [0,6]])
+    sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y = nn.Dataset(sample[1:,:2],  expert = [[0,80], [-12,6]])
     sample_x.normalisation_linear([0,1])
     sample_y.normalisation_linear([0,1])
     
@@ -23,13 +23,38 @@ def train_net(net, sample):
 
 def ensemble_predict(ensemble, example):
     outs = [net.predict(example) for net in ensemble]
-    
-    
     return(sum(outs)/len(outs))
+    
+def check_ensemble(samp):
+    sample_x = nn.Dataset(samp[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y = nn.Dataset(samp[1:,:2], expert = [[0,80], [-12,6]])
+    sample_x.normalisation_linear([0,1])
+    sample_y.normalisation_linear([0,1])
+    
+    n_out = np.array([ensemble_predict(ensemble,i) for i in sample_x ])
+    
+    err = nn.RMSE(sample_y, n_out)
+    print("error %f" %(err))
+    plt.plot(range(0,len(samp)-1), sample_y[:,0])
+    plt.plot(range(0,len(samp)-1), n_out[:,0])
+    
+    #prediction = [sample_x[0]]
+    #for i in range(len(sample_x)):
+    #    prediction.append(ensemble_predict(ensemble,prediction[i-1]))
+    #
+    #plt.plot(range(0,len(sample_x)), np.array(prediction[1:])[:,0])
+    
+    prediction = [sample_x[0]]
+    for i in range(1,len(sample_x)):
+        prediction.append(ensemble_predict(ensemble, prediction[i-1]))
+        prediction[i] = np.append(prediction[i],sample_x[i][2])
+    plt.plot(range(0,len(sample_x)), np.array(prediction[:])[:,0])
+    
+    
     
 
 data = pd.read_csv("data.csv")
-data = data.loc[:,["op_density","subs_consumption", "caratin"]]
+data = data.loc[:,["op_density","subs_consumption", "subs_flow"]]
 
 sample_1 = data[:82]        #82
 sample_2 = data[85:122]     #37
@@ -45,12 +70,12 @@ sample_4 = sample_4.to_numpy()
 sample_5 = sample_5.to_numpy()
 sample_6 = sample_6.to_numpy()
 
-n1 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
-n2 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
-n3 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
-n4 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
-n5 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
-n6 = perc.NPecrep([3, 4, 3], perc.sgmoidFunc)
+n1 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
+n2 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
+n3 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
+n4 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
+n5 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
+n6 = perc.NPecrep([3, 3,3, 2], perc.sgmoidFunc)
 
 err1 = train_net(n1,sample_1)
 err2 = train_net(n2,sample_2)
@@ -69,27 +94,12 @@ print(err6)
 
 ensemble = [n1,n2,n3,n4,n5,n6]
 
-samp = sample_3
-
-sample_x = nn.Dataset(samp[:-1], expert = [[0,80], [-12,6], [0,6]])
-sample_y = nn.Dataset(samp[1:], expert = [[0,80], [-12,6], [0,6]])
-sample_x.normalisation_linear([0,1])
-sample_y.normalisation_linear([0,1])
-
-n_out = np.array([ensemble_predict(ensemble,i) for i in sample_x ])
-
-err = nn.RMSE(sample_y, n_out)
-
-plt.plot(range(0,len(samp)-1), sample_y[:,0])
-plt.plot(range(0,len(samp)-1), n_out[:,0])
-
-prediction = [sample_x[0]]
-for i in range(len(sample_x)):
-    prediction.append(ensemble_predict(ensemble,prediction[i-1]))
-
-plt.plot(range(0,len(sample_x)), np.array(prediction[1:])[:,0])
-
-
+check_ensemble(sample_1)
+check_ensemble(sample_2)
+check_ensemble(sample_3)
+check_ensemble(sample_4)
+check_ensemble(sample_5)
+check_ensemble(sample_6)
 
 
 
