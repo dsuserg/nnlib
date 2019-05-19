@@ -135,19 +135,11 @@ class ActivationFunc:
             
 class Dataset:
     
-    def __init__(self, data, dtype = np.float64):
+    def __init__(self, data, expert = None, percentage = None, dtype = np.float64):
         self._data = np.array(data, dtype = dtype)
         self._size = len(self._data)                  
         self._example_size = len(self._data[0])
         self._status = "pure"
-        self._range = None
-        self._expert = None
-        self._percentage = None
-        self._max_elems = None
-        self._min_elems = None
-        self._centers = None
-        
-    def tune_up(self, expert = None, percentage = None):
         self._max_elems = np.zeros((self._example_size))
         self._min_elems = np.zeros((self._example_size))
         self._centers = np.zeros((self._example_size))
@@ -156,7 +148,7 @@ class Dataset:
             for i in range(self._example_size):
                 if expert[i]:
                     self._min_elems[i] = expert[i][0]
-                    self._min_elems[i] = expert[i][1]
+                    self._max_elems[i] = expert[i][1]
                 else:
                     self._max_elems[i] = max(self._data[:,i])
                     self._min_elems[i] = min(self._data[:,i])            
