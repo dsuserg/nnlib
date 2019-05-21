@@ -3,31 +3,28 @@ import numpy as np
 import nnlibs.nnlib as nn
 import nnlibs.perceptron as perc
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 
-def train_net(net, sample):
-    EPOCHES_CNT = 100
-    
-    sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,6], [0,60]])
-    sample_y = nn.Dataset(sample[1:,:3],  expert = [[0,80], [-12,6], [0,6]])
+def train_net(net, sample, epoches):    
+    sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,4], [0,60]])
+    sample_y = nn.Dataset(sample[1:,:3],  expert = [[0,80], [-12,6], [0,4]])
     sample_x.normalisation_linear([0,1])
     sample_y.normalisation_linear([0,1])
     
     sample_tr = [sample_x,sample_y]
-    for i in range(500):
-        net.train(sample_tr, perc.Backpropagation_nn(EPOCHES_CNT))
-            
+    net.train(sample_tr, perc.Backpropagation_nn(epoches))
     n_out = [net.predict(i) for i in sample_x ]
     
-    print("Done")
-    return nn.RMSE(sample_y, n_out)
+#    print("Done")
+    print( nn.RMSE(sample_y, n_out))
 
-def ensemble_predict(ensemble, example):
+def ensemble_predict(ensemble,example):
     outs = [net.predict(example) for net in ensemble]
     return(sum(outs)/len(outs))
     
 def check_ensemble(samp):
-    sample_x = nn.Dataset(samp[:-1], expert = [[0,80], [-12,6], [0,6], [0,60]])
-    sample_y = nn.Dataset(samp[1:,:3], expert = [[0,80], [-12,6], [0,6]])
+    sample_x = nn.Dataset(samp[:-1], expert = [[0,80], [-12,6],[0,4], [0,60]])
+    sample_y = nn.Dataset(samp[1:,:3], expert = [[0,80], [-12,6],[0,4]])
     sample_x.normalisation_linear([0,1])
     sample_y.normalisation_linear([0,1])
     
@@ -56,7 +53,7 @@ def check_ensemble(samp):
     
 
 data = pd.read_csv("data.csv")
-data = data.loc[:,["op_density","subs_consumption", "subs_flow","caratin"]]
+data = data.loc[:,["op_density","subs_consumption", "caratin", "subs_flow",]]
 
 sample_1 = data[:82]        #82
 sample_2 = data[85:122]     #37
@@ -72,26 +69,45 @@ sample_4 = sample_4.to_numpy()
 sample_5 = sample_5.to_numpy()
 sample_6 = sample_6.to_numpy()
 
-n1 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
-n2 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
-n3 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
-n4 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
-n5 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
-n6 = perc.NPecrep([4, 3,3, 3], perc.sgmoidFunc)
+n1 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
+n2 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
+n3 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
+n4 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
+n5 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
+n6 = perc.NPecrep([4, 4,4, 3], perc.sgmoidFunc)
 
-err1 = train_net(n1,sample_1)
-err2 = train_net(n2,sample_2)
-err3 = train_net(n3,sample_3)
-err4 = train_net(n4,sample_4)
-err5 = train_net(n5,sample_5)
-err6 = train_net(n6,sample_6)
 
-print(err1)
-print(err2)
-print(err3)
-print(err4)
-print(err5)
-print(err6)
+EPOCHES = 100000
+
+
+p1 = mp.Process(target = train_net, args = (n1, sample_1, int(EPOCHES),))
+p2 = mp.Process(target = train_net, args = (n2, sample_2, int(EPOCHES),))
+p3 = mp.Process(target = train_net, args = (n3, sample_3, int(EPOCHES),))
+p4 = mp.Process(target = train_net, args = (n4, sample_4, int(EPOCHES),))
+p5 = mp.Process(target = train_net, args = (n5, sample_5, int(EPOCHES),))
+p6 = mp.Process(target = train_net, args = (n6, sample_6, int(EPOCHES),))
+
+p1.start()
+p1.join()
+p2.start()
+p2.join()
+p3.start()
+p3.join()
+p4.start()
+p4.join()
+p5.start()
+p5.join()
+p6.start()
+p6.join()
+
+
+
+#print(err1)
+#print(err2)
+#print(err3)
+#print(err4)
+#print(err5)
+#print(err6)
 
 
 ensemble = [n1,n2,n3,n4,n5,n6]
