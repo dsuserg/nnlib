@@ -14,7 +14,6 @@ if __name__ == "__main__":
 else:    
     from . import nnlib as nn
 
-
 def sigmoid(net, a = 1.0):
     return 1/(1 + np.exp(net*-a))
 
@@ -159,7 +158,8 @@ class Backpropagation(nn.Trainer):
                 self.update_coefficients(discrepancies, 
                                          inp[j], 
                                          neural_network)
-                
+
+          
 class Backpropagation_nn(nn.Trainer):
     
     def __init__(self, epoches_cnt, train_speed = 1.0):
