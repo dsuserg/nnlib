@@ -7,10 +7,15 @@ import copy
 from numba import jit
 from sklearn.metrics import mean_squared_error as MSE
 import shelve
+import multiprocessing as mp
 
 def RMSE(x, y):
     return MSE(x, y)**(1/2)
 
+def mp_train_net(child_con,*argv):
+    child_con.send(train_net(*argv))
+    child_con.close()
+    
 def train_net(net, sample, epoches, n_times):    
     sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,60]])
     sample_y = nn.Dataset(sample[1:,:2],  expert = [[0,80], [-12,6]])
@@ -96,77 +101,93 @@ def check_ensemble(n,n2, samp):
     axes[1].legend()
     
     
+
+if __name__ == "__main__":    
+    data = pd.read_csv("data.csv")
+    data = data.loc[:,["op_density","subs_consumption", "subs_flow"]]
+    #236
+    sample_1 = data[:82]        #82
+    sample_2 = data[85:122]     #37
+    sample_3 = data[149:206]    #57
+    sample_4 = data[209:269]    #60
+     
     
-data = pd.read_csv("data.csv")
-data = data.loc[:,["op_density","subs_consumption", "subs_flow"]]
-#236
-sample_1 = data[:82]        #82
-sample_2 = data[85:122]     #37
-#sample_3 = data[125:146]    #21
-sample_4 = data[149:206]    #57
-sample_5 = data[209:269]    #60
-#sample_6 = data[272:315]    #39
- 
-
-sample_1 = sample_1.to_numpy()
-sample_2 = sample_2.to_numpy()
-sample_4 = sample_4.to_numpy()
-sample_5 = sample_5.to_numpy()
-
-sample = np.concatenate((sample_1,sample_2,sample_4,sample_5))
-#sample = sample_1
-sample = sample[:]
-
-n1 = perc.NPecrep([3, 6, 6, 2], perc.sgmoidFunc)
-
-n2 = perc.NPecrep([3, 3, 3, 2], perc.sgmoidFunc)
-n2.set_new_order(2)
-
-n3 = perc.NPecrep([3, 2, 2, 2], perc.sgmoidFunc)
-n3.set_new_order(3)
-
-
-EPOCHES = 100
-n_times = 20000//EPOCHES
-
-#err1 = train_net(n1,sample,EPOCHES, n_times)
-#with shelve.open("err1") as db:
-#    db["err1"] = err1
-
-#err2 = train_net(n2,sample,EPOCHES, n_times)
-#with shelve.open("err2") as db:
-#    db["err2"] = err2
-#
-#err3 = train_net(n3,sample,EPOCHES, n_times)
-#with shelve.open("err3") as db:
-#    db["err3"] = err3
-#
-#err4 = train_net2(n4,sample,EPOCHES, n_times)
-#with shelve.open("err4") as db:
-#    db["err4"] = err4
-#
-#err5 = train_net2(n5,sample,EPOCHES, n_times)
-#with shelve.open("err5") as db:
-#    db["err5"] = err5
-
-
-#check_error((err1,err2,err3,err4,err5), EPOCHES, n_times)
-
-
-#check_ensemble(n,n2, sample_1)
-#check_ensemble(n,n2, sample_2)
-#check_ensemble(n,n2, sample_4)
-#check_ensemble(n,n2, sample_5)
-
-
-#with shelve.open("err1") as db:
-#    err1 = db["err1"] 
-#
-#with shelve.open("err2") as db:
-#    err2 = db["err2"]  
-#
-#with shelve.open("err3") as db:
-#    err3 = db["err3"] 
-#
-#check_error((err1,err2,err3), EPOCHES, n_times)
-
+    sample_1 = sample_1.to_numpy()
+    sample_2 = sample_2.to_numpy()
+    sample_3 = sample_3.to_numpy()
+    sample_4 = sample_4.to_numpy()
+    
+    sample = np.concatenate((sample_1,sample_2,sample_3,sample_4))
+    #sample = sample_1
+    sample = sample[:]
+    
+    n1 = perc.NPecrep([3, 6, 2], perc.sgmoidFunc)
+    
+    n2 = perc.NPecrep([3, 3, 2], perc.sgmoidFunc)
+    n2.set_new_order(2)
+    
+    n3 = perc.NPecrep([3, 2, 2], perc.sgmoidFunc)
+    n3.set_new_order(3)
+    
+    
+    EPOCHES = 10
+    n_times = 20//EPOCHES
+    
+    parent1 , child1 = mp.Pipe()
+    parent2 , child2 = mp.Pipe()
+    parent3 , child3 = mp.Pipe()
+    
+    
+    p1 = mp.Process(target=mp_train_net , args=(child1, n1, sample, EPOCHES, n_times))
+    p2 = mp.Process(target=mp_train_net , args=(child2, n2, sample, EPOCHES, n_times))
+    p3 = mp.Process(target=mp_train_net , args=(child3, n3, sample, EPOCHES, n_times))
+    
+    p1.start()
+    p2.start()
+    p3.start()
+    
+    err1 = parent1.recv()
+    err2 = parent2.recv()
+    err3 = parent3.recv()
+    
+    p1.join()
+    p2.join()
+    p3.join()
+    
+    
+    
+    
+    
+    with shelve.open("err1") as db:
+        db["err1"] = err1
+    
+    with shelve.open("err2") as db:
+        db["err2"] = err2
+    
+    
+    with shelve.open("err3") as db:
+        db["err3"] = err3
+    
+    
+    print("done")
+#    check_error((err1,err2,err3), EPOCHES, n_times)
+        
+    
+    
+    #check_ensemble(n,n2, sample_1)
+    #check_ensemble(n,n2, sample_2)
+    #check_ensemble(n,n2, sample_4)
+    #check_ensemble(n,n2, sample_5)
+    
+    
+    #with shelve.open("err1") as db:
+    #    err1 = db["err1"] 
+    #
+    #with shelve.open("err2") as db:
+    #    err2 = db["err2"]  
+    #
+    #with shelve.open("err3") as db:
+    #    err3 = db["err3"] 
+    #
+    #check_error((err1,err2,err3), EPOCHES, n_times)
+    
