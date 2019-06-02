@@ -16,21 +16,36 @@ def mp_train_net(child_con,*argv):
     child_con.send(train_net(*argv))
     child_con.close()
     
-def train_net(net, sample, epoches, n_times):    
-    sample_x = nn.Dataset(sample[:-1], expert = [[0,80], [-12,6], [0,60]])
-    sample_y = nn.Dataset(sample[1:,:2],  expert = [[0,80], [-12,6]])
+def train_net(net, train_sample, test_sample, epoches, n_times):    
+    sample_x = nn.Dataset(train_sample[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y = nn.Dataset(train_sample[1:,:2],  expert = [[0,80], [-12,6]])
     sample_x.normalisation_linear([0,1])
     sample_y.normalisation_linear([0,1])
     
+    sample_x_t = nn.Dataset(test_sample[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y_t = nn.Dataset(test_sample[1:,:2],  expert = [[0,80], [-12,6]])
+    sample_x_t.normalisation_linear([0,1])
+    sample_y_t.normalisation_linear([0,1])
+    
+    
+    
     errors = []
+    errors_tst = []
+    
     sample_tr = [sample_x,sample_y]
+    
     
     for i in range(n_times):
         net.train(sample_tr, perc.Backpropagation_nn(epoches))
+        
         n_out = [net.predict(i) for i in sample_x]
+        n_out_tst = [net.predict(i) for i in sample_x_t]
+        
+        
         errors.append(RMSE(sample_y, n_out))
-    
-    return errors
+        errors_tst.append(RMSE(sample_y_t, n_out_tst))
+        
+    return errors, errors_tst
    
 def check_error(errors_lst, epoches, n_times):
     fig, axes = plt.subplots(constrained_layout=True)
@@ -48,6 +63,7 @@ def check_error(errors_lst, epoches, n_times):
     axes.set_ylabel("Ошибка")
     axes.legend()
 #    fig.suptitle.format()
+
     
 def check_ensemble(n,n2, samp):
     sample_x = nn.Dataset(samp[:-1], expert = [[0,80], [-12,6], [0,60]])
@@ -117,10 +133,15 @@ if __name__ == "__main__":
     sample_3 = sample_3.to_numpy()
     sample_4 = sample_4.to_numpy()
     
-    sample = np.concatenate((sample_1,sample_2,sample_3,sample_4))
-    #sample = sample_1
-    sample = sample[:]
     
+    
+#    train_sample = np.concatenate((sample_1))
+    train_sample = sample_1
+    test_sample = np.concatenate((sample_2,sample_3,sample_4))
+    train_sample = train_sample[:]
+    test_sample = test_sample[:]
+    #sample = sample_1
+
     n1 = perc.NPecrep([3, 6, 2], perc.sgmoidFunc)
     
     n2 = perc.NPecrep([3, 3, 2], perc.sgmoidFunc)
@@ -131,16 +152,16 @@ if __name__ == "__main__":
     
     
     EPOCHES = 10
-    n_times = 20//EPOCHES
+    n_times = 1000//EPOCHES
     
     parent1 , child1 = mp.Pipe()
     parent2 , child2 = mp.Pipe()
     parent3 , child3 = mp.Pipe()
     
     
-    p1 = mp.Process(target=mp_train_net , args=(child1, n1, sample, EPOCHES, n_times))
-    p2 = mp.Process(target=mp_train_net , args=(child2, n2, sample, EPOCHES, n_times))
-    p3 = mp.Process(target=mp_train_net , args=(child3, n3, sample, EPOCHES, n_times))
+    p1 = mp.Process(target=mp_train_net , args=(child1, n1, train_sample, test_sample, EPOCHES, n_times))
+    p2 = mp.Process(target=mp_train_net , args=(child2, n2, train_sample, test_sample, EPOCHES, n_times))
+    p3 = mp.Process(target=mp_train_net , args=(child3, n3, train_sample, test_sample, EPOCHES, n_times))
     
     p1.start()
     p2.start()
@@ -170,8 +191,8 @@ if __name__ == "__main__":
     
     
     print("done")
-#    check_error((err1,err2,err3), EPOCHES, n_times)
-        
+    check_error((err1[0],err2[0],err3[0]), EPOCHES, n_times)
+    check_error((err1[1],err2[1],err3[1]), EPOCHES, n_times)
     
     
     #check_ensemble(n,n2, sample_1)
