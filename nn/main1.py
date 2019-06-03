@@ -12,9 +12,18 @@ import multiprocessing as mp
 def RMSE(x, y):
     return MSE(x, y)**(1/2)
 
-def mp_train_net(child_con,*argv):
-    child_con.send(train_net(*argv))
-    child_con.close()
+def calc_weights(n):
+    struc = n.get_structure()
+    summ = 0
+    
+    for i in range(1,len(struc)):
+        summ += (struc[i-1] + 1) * struc[i]
+    
+    for j in range(n.get_order()-1):
+        for i in range(1,len(struc)):
+            summ += (struc[i-1]) * struc[i]
+    
+    return summ
     
 def train_net(net, train_sample, test_sample, epoches, n_times):    
     sample_x = nn.Dataset(train_sample[:-1], expert = [[0,80], [-12,6], [0,60]])
@@ -34,7 +43,10 @@ def train_net(net, train_sample, test_sample, epoches, n_times):
     
     sample_tr = [sample_x,sample_y]
     
-    
+    n_out = [net.predict(i) for i in sample_x]
+    n_out_tst = [net.predict(i) for i in sample_x_t]
+    errors.append(RMSE(sample_y, n_out))
+    errors_tst.append(RMSE(sample_y_t, n_out_tst))
     for i in range(n_times):
         net.train(sample_tr, perc.Backpropagation_nn(epoches))
         
@@ -46,19 +58,49 @@ def train_net(net, train_sample, test_sample, epoches, n_times):
         errors_tst.append(RMSE(sample_y_t, n_out_tst))
         
     return errors, errors_tst
+
+def train_net_1(net, train_sample, test_sample, epoches, n_times):    
+    sample_x = nn.Dataset(train_sample[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y = nn.Dataset(train_sample[1:,:2],  expert = [[0,80], [-12,6]])
+    sample_x.normalisation_linear([0,1])
+    sample_y.normalisation_linear([0,1])
+    
+    sample_x_t = nn.Dataset(test_sample[:-1], expert = [[0,80], [-12,6], [0,60]])
+    sample_y_t = nn.Dataset(test_sample[1:,:2],  expert = [[0,80], [-12,6]])
+    sample_x_t.normalisation_linear([0,1])
+    sample_y_t.normalisation_linear([0,1])
+    
+    
+    
+    errors = []
+    errors_tst = []
+    
+    sample_tr = [sample_x,sample_y]
+    
+    n_out = [net.predict(i) for i in sample_x]
+    n_out_tst = [net.predict(i) for i in sample_x_t]
+    errors.append(RMSE(sample_y, n_out))
+    errors_tst.append(RMSE(sample_y_t, n_out_tst))
+    for i in range(n_times):
+        net.train(sample_tr, perc.Backpropagation_n(epoches))
+        
+        n_out = [net.predict(i) for i in sample_x]
+        n_out_tst = [net.predict(i) for i in sample_x_t]
+        
+        
+        errors.append(RMSE(sample_y, n_out))
+        errors_tst.append(RMSE(sample_y_t, n_out_tst))
+        
+    return errors, errors_tst
    
-def check_error(errors_lst, epoches, n_times):
+def check_error(errors_lst, epoches, n_times, description):
     fig, axes = plt.subplots(constrained_layout=True)
-    epoche_axe = [epoches*i for i in range(1, n_times+1)]
+    epoche_axe = [epoches*i for i in range(0, n_times+1)]
     
     for i, errors in enumerate(errors_lst):
         axes.plot(epoche_axe, errors, label = "Сеть %s" % str(i+1))
     
-    fig.suptitle("""                      Структура сети 1 {0}
-                    Структура сети 2 {1}
-                    Структура сети 3 {2}""".format("3-12-2",
-                                                   "3-6-2",
-                                                   "3-4-2"))
+    fig.suptitle(description)
     axes.set_xlabel("Количество эпох")
     axes.set_ylabel("Ошибка")
     axes.legend()
@@ -150,50 +192,32 @@ if __name__ == "__main__":
     n3 = perc.NPecrep([3, 2, 2], perc.sgmoidFunc)
     n3.set_new_order(3)
     
-    
+    print(calc_weights(n1))
+    print(calc_weights(n2))
+    print(calc_weights(n3))
+
     EPOCHES = 10
-    n_times = 1000//EPOCHES
+    n_times = 5000//EPOCHES
     
-    parent1 , child1 = mp.Pipe()
-    parent2 , child2 = mp.Pipe()
-    parent3 , child3 = mp.Pipe()
-    
-    
-    p1 = mp.Process(target=mp_train_net , args=(child1, n1, train_sample, test_sample, EPOCHES, n_times))
-    p2 = mp.Process(target=mp_train_net , args=(child2, n2, train_sample, test_sample, EPOCHES, n_times))
-    p3 = mp.Process(target=mp_train_net , args=(child3, n3, train_sample, test_sample, EPOCHES, n_times))
-    
-    p1.start()
-    p2.start()
-    p3.start()
-    
-    err1 = parent1.recv()
-    err2 = parent2.recv()
-    err3 = parent3.recv()
-    
-    p1.join()
-    p2.join()
-    p3.join()
+
+    err1 = train_net(n1, train_sample, test_sample, EPOCHES, n_times)
+    err2 = train_net(n2, train_sample, test_sample, EPOCHES, n_times)
+    err3 = train_net(n3, train_sample, test_sample, EPOCHES, n_times)
+
+
     
     
+#    with shelve.open("err") as db:
+#        db["err1"] = err1
+#        db["err2"] = err2
+#        db["err3"] = err2
+
     
-    
-    
-    with shelve.open("err1") as db:
-        db["err1"] = err1
-    
-    with shelve.open("err2") as db:
-        db["err2"] = err2
-    
-    
-    with shelve.open("err3") as db:
-        db["err3"] = err3
-    
-    
+#    
     print("done")
-    check_error((err1[0],err2[0],err3[0]), EPOCHES, n_times)
-    check_error((err1[1],err2[1],err3[1]), EPOCHES, n_times)
-    
+    check_error((err1[0],err2[0],err3[0]), EPOCHES, n_times,"plot")
+    check_error((err1[1],err2[1],err3[1]), EPOCHES, n_times,"plot")
+#    
     
     #check_ensemble(n,n2, sample_1)
     #check_ensemble(n,n2, sample_2)
