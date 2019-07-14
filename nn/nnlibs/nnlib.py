@@ -129,8 +129,6 @@ class NeuralNetwork:
     def __iter__(self):
         return (layer for layer in self._layers)
 
-# so abstract
-
 
 class Trainer:
     def __init__(self, *params, **kparams):
